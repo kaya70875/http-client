@@ -12,37 +12,37 @@ export class CustomClient {
     this.port = port;
   }
 
-  get(url: string, config?: RequestConfig): Promise<ResponseT> {
+  private createHeaders(customHeaders?: Record<string, string>): string {
+    const merged = { ...this.defaultHeaders, ...(customHeaders ?? {}) };
+    return Object.entries(merged)
+      .map(([key, value]) => `${key}: ${value}\r\n`)
+      .join("");
+  }
+
+  private buildRequest(
+    method: string,
+    host: string,
+    path: string,
+    headers: string,
+    body?: string | null
+  ): string {
+    return (
+      `${method} ${path} HTTP/1.1\r\n` +
+      `Host: ${host}\r\n` +
+      headers +
+      `Connection: close\r\n` +
+      `\r\n` +
+      (body ?? "")
+    );
+  }
+
+  private sendRequest(host: string, request: string): Promise<ResponseT> {
     return new Promise((resolve, reject) => {
-      const parsedUrl = new URL(url);
-      const host = parsedUrl.host;
-      const path = parsedUrl.pathname + parsedUrl.search;
-
-      const mergedHeaders = {
-        ...this.defaultHeaders,
-        ...(config?.headers ?? {}),
-      };
-
-      const headerString = Object.entries(mergedHeaders)
-        .map(([key, value]) => `${key}: ${value}\r\n`)
-        .join("");
-
-      console.log(headerString);
-
       const client = net.createConnection({ host, port: this.port }, () => {
-        const request =
-          `GET ${path} HTTP/1.1\r\n` +
-          `Host: ${host}\r\n` +
-          headerString +
-          `Connection: close\r\n` +
-          `\r\n`;
-
         client.write(request);
       });
 
-      // Set timeout for request.
       client.setTimeout(16000);
-
       let response = "";
 
       client.on("data", (chunk) => {
@@ -65,7 +65,31 @@ export class CustomClient {
     });
   }
 
-  post(url: string, config: RequestConfig) {
-    // Can be implemented later
+  get(url: string, config?: RequestConfig): Promise<ResponseT> {
+    const parsed = new URL(url);
+    const headers = this.createHeaders(config?.headers);
+    const request = this.buildRequest(
+      "GET",
+      parsed.host,
+      parsed.pathname + parsed.search,
+      headers
+    );
+    return this.sendRequest(parsed.host, request);
+  }
+
+  post(url: string, config: RequestConfig): Promise<ResponseT> {
+    const parsed = new URL(url);
+    const body = config.body ? JSON.stringify(config.body) : "";
+    const headers = this.createHeaders({
+      ...config?.headers,
+    });
+    const request = this.buildRequest(
+      "POST",
+      parsed.host,
+      parsed.pathname + parsed.search,
+      headers,
+      body
+    );
+    return this.sendRequest(parsed.host, request);
   }
 }
