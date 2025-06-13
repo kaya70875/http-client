@@ -4,6 +4,9 @@ import { processResponse } from "../utils/processResponse";
 
 export class CustomClient {
   port: number;
+  defaultHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
 
   constructor(port: number = 80) {
     this.port = port;
@@ -15,18 +18,16 @@ export class CustomClient {
       const host = parsedUrl.host;
       const path = parsedUrl.pathname + parsedUrl.search;
 
-      const defaultHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
       const mergedHeaders = {
-        ...defaultHeaders,
+        ...this.defaultHeaders,
         ...(config?.headers ?? {}),
       };
 
       const headerString = Object.entries(mergedHeaders)
-        .map((key, value) => `${key}: ${value}\r\n`)
+        .map(([key, value]) => `${key}: ${value}\r\n`)
         .join("");
+
+      console.log(headerString);
 
       const client = net.createConnection({ host, port: this.port }, () => {
         const request =
