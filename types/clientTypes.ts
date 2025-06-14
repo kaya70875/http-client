@@ -6,5 +6,8 @@ export interface RequestConfig {
 export interface ResponseT {
   statusCode: number;
   statusMessage: string;
+  headers: Record<string, string>;
   data: any;
 }
+
+export type Method = "GET" | "POST" | "PUT" | "DELETE";
