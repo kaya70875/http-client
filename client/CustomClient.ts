@@ -1,19 +1,24 @@
 import * as net from "net";
-import { RequestConfig, ResponseT } from "../types/clientTypes";
+import { Method, RequestConfig, ResponseT } from "../types/clientTypes";
 import { processResponse } from "../utils/processResponse";
+import { DefaultConfig } from "../lib/defaults";
 
 export class CustomClient {
-  port: number;
-  defaultHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  constructor(port: number = 80) {
-    this.port = port;
+  defaults: DefaultConfig;
+  constructor(defaultConfig: DefaultConfig) {
+    this.defaults = defaultConfig || {};
   }
 
-  private createHeaders(customHeaders?: Record<string, string>): string {
-    const merged = { ...this.defaultHeaders, ...(customHeaders ?? {}) };
+  private createHeaders(
+    customHeaders?: Record<string, string>,
+    method: Method = "GET"
+  ): string {
+    const methodL = method.toLowerCase() as keyof typeof this.defaults.headers;
+    const merged = {
+      ...this.defaults.headers.common,
+      ...this.defaults.headers[methodL],
+      ...(customHeaders ?? {}),
+    };
     return Object.entries(merged)
       .map(([key, value]) => `${key}: ${value}\r\n`)
       .join("");
@@ -38,9 +43,13 @@ export class CustomClient {
 
   private sendRequest(host: string, request: string): Promise<ResponseT> {
     return new Promise((resolve, reject) => {
-      const client = net.createConnection({ host, port: this.port }, () => {
-        client.write(request);
-      });
+      console.log(request);
+      const client = net.createConnection(
+        { host, port: this.defaults.port },
+        () => {
+          client.write(request);
+        }
+      );
 
       client.setTimeout(16000);
       let response = "";
@@ -80,9 +89,12 @@ export class CustomClient {
   post(url: string, config: RequestConfig): Promise<ResponseT> {
     const parsed = new URL(url);
     const body = config.body ? JSON.stringify(config.body) : "";
-    const headers = this.createHeaders({
-      ...config?.headers,
-    });
+    const headers = this.createHeaders(
+      {
+        ...config?.headers,
+      },
+      "POST"
+    );
     const request = this.buildRequest(
       "POST",
       parsed.host,
