@@ -22,12 +22,14 @@ export function processResponse(raw: string): ResponseT {
     return {
       statusCode: Number(statusCode),
       statusMessage,
+      headers,
       data,
     };
   } catch (err) {
     return {
       statusCode: Number(500),
       statusMessage: `error while processing raw data: ${err}`,
+      headers: {},
       data: null,
     };
   }
