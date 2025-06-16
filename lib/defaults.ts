@@ -12,7 +12,7 @@ export const defaults = {
     },
   },
   port: 80,
-  timeout: 16000,
+  timeout: 24000,
 };
 
 export interface DefaultConfig {
